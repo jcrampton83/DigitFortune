@@ -1,0 +1,6 @@
+{
+  "name": "Compute Power Gaming & Wagering",
+  "description": "Lend CPU processing power to earn credits, wager them on casino games, and withdraw as fiat.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
