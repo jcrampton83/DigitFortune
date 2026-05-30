@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActiveGame, Transaction } from '../types';
+import { ActiveGame, Transaction, CustomTheme } from '../types';
 import SlotsGame from './games/SlotsGame';
 import BlackjackGame from './games/BlackjackGame';
 import CrashGame from './games/CrashGame';
@@ -15,9 +15,10 @@ interface CasinoLobbyProps {
   balance: number;
   setBalance: (updater: (prev: number) => number) => void;
   addTransaction: (tx: Transaction) => void;
+  theme?: CustomTheme;
 }
 
-export default function CasinoLobby({ balance, setBalance, addTransaction }: CasinoLobbyProps) {
+export default function CasinoLobby({ balance, setBalance, addTransaction, theme }: CasinoLobbyProps) {
   const [activeGame, setActiveGame] = useState<ActiveGame>(null);
 
   // Available games metadata
@@ -124,20 +125,44 @@ export default function CasinoLobby({ balance, setBalance, addTransaction }: Cas
     <div className="space-y-6 text-slate-100 relative z-10" id="casino-lobby">
       {/* Grid of games cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-        {GAMES.map((game) => (
-          <div
-            key={game.id}
-            onClick={() => setActiveGame(game.id)}
-            className="group relative glass-container hover:bg-white/[0.02] hover:border-cyan-400/40 rounded-2xl p-6 cursor-pointer transition-all hover:scale-[1.01] flex flex-col justify-between overflow-hidden shadow-xl min-h-[240px]"
-          >
-            {/* Immersive Game Background Image with Glass Overlay */}
-            <img
-              src={game.bg}
-              alt={game.name}
-              referrerPolicy="no-referrer"
-              className="absolute inset-0 w-full h-full object-cover opacity-25 group-hover:opacity-35 group-hover:scale-105 transition-all duration-700 pointer-events-none z-0"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/30 z-0 pointer-events-none" />
+        {GAMES.map((game) => {
+          const gameCardTheme = theme?.cards?.[game.id];
+          const isThemeDefault = !theme || theme.id === 'default' || theme.isDefault;
+
+          let bgSrc = game.bg;
+          let shouldRenderImage = true;
+
+          if (!isThemeDefault && gameCardTheme) {
+            if (gameCardTheme.useImage && gameCardTheme.imageUrl) {
+              bgSrc = gameCardTheme.imageUrl;
+              shouldRenderImage = true;
+            } else if (!gameCardTheme.useImage && !gameCardTheme.imageUrl) {
+              // They haven't set a custom image, so we keep the default game image as fallback
+              bgSrc = game.bg;
+              shouldRenderImage = true;
+            } else {
+              // They have explicitly chosen "Use Solid", so don't render the image
+              shouldRenderImage = false;
+            }
+          }
+
+          return (
+            <div
+              key={game.id}
+              onClick={() => setActiveGame(game.id)}
+              className="group relative glass-container hover:bg-white/[0.02] hover:border-cyan-400/40 rounded-2xl p-6 cursor-pointer transition-all hover:scale-[1.01] flex flex-col justify-between overflow-hidden shadow-xl min-h-[240px]"
+              style={{ backgroundColor: !isThemeDefault ? gameCardTheme?.color : undefined }}
+            >
+              {/* Immersive Game Background Image with Glass Overlay */}
+              {shouldRenderImage && bgSrc && (
+                <img
+                  src={bgSrc}
+                  alt={game.name}
+                  referrerPolicy="no-referrer"
+                  className="absolute inset-0 w-full h-full object-cover opacity-25 group-hover:opacity-35 group-hover:scale-105 transition-all duration-700 pointer-events-none z-0"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/30 z-0 pointer-events-none" />
 
             <div className="relative z-10">
               {/* Card headers */}
@@ -170,7 +195,8 @@ export default function CasinoLobby({ balance, setBalance, addTransaction }: Cas
               </span>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

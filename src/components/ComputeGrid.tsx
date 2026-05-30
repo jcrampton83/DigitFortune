@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Dispatch, SetStateAction } from 'react';
-import { Cpu, Flame, Play, Square, Activity, HelpCircle, Sliders, Laptop, Coins, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
-import { MiningStats, Transaction } from '../types';
+import { Cpu, Flame, Play, Square, Activity, HelpCircle, Sliders, Laptop, Coins, ShieldCheck, ChevronDown, ChevronUp, ShieldAlert } from 'lucide-react';
+import { MiningStats, Transaction, ComputeSpecs } from '../types';
 
 interface ComputeGridProps {
   balance: number;
@@ -8,6 +8,7 @@ interface ComputeGridProps {
   addTransaction: (tx: Transaction) => void;
   miningStats: MiningStats;
   setMiningStats: Dispatch<SetStateAction<MiningStats>>;
+  specs?: ComputeSpecs;
 }
 
 export default function ComputeGrid({
@@ -16,6 +17,7 @@ export default function ComputeGrid({
   addTransaction,
   miningStats,
   setMiningStats,
+  specs,
 }: ComputeGridProps) {
   const [showDocs, setShowDocs] = useState<boolean>(false);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState<boolean>(false);
@@ -195,6 +197,54 @@ export default function ComputeGrid({
     };
   }, []);
 
+  // Safe-mode throttler when hardware specifications profile is unconfigured
+  useEffect(() => {
+    if (specs && !specs.isConfigured) {
+      if (miningStats.threads > 1 || miningStats.intensity > 30) {
+        setMiningStats(prev => ({
+          ...prev,
+          threads: 1,
+          intensity: Math.min(prev.intensity, 30),
+        }));
+      }
+    }
+  }, [specs, setMiningStats, miningStats.threads, miningStats.intensity]);
+
+  // Temperature formula modified dynamically if user has Liquid Cooling specs!
+  const simulatedTemp = miningStats.isActive
+    ? Math.round(
+        32 + 
+        (miningStats.intensity * (specs?.coolingType === 'liquid' ? 0.22 : 0.32)) + 
+        (miningStats.threads * (specs?.coolingType === 'liquid' ? 1.8 : 2.8)) + 
+        (Math.random() * 1.5)
+      )
+    : 28; // Air/liquid cooler base idle temps
+
+  // Emergency core thermal cutoff monitor
+  useEffect(() => {
+    if (!miningStats.isActive) return;
+
+    const activeLimit = parseInt(localStorage.getItem('sys_thermal_limit') || '80');
+    const isShutdownActive = localStorage.getItem('sys_thermal_shutdown') !== 'false';
+
+    if (isShutdownActive && simulatedTemp >= activeLimit) {
+      stopAllWorkers();
+      setMiningStats(prev => ({ ...prev, isActive: false, hashRate: 0 }));
+      
+      const emergencyId = `emergency-trip-${Date.now()}`;
+      addTransaction({
+        id: emergencyId,
+        timestamp: new Date().toISOString(),
+        type: 'payout_rejected',
+        amount: 0,
+        title: '⚠️ CRITICAL THERMAL EVENT TRIGGERED',
+        details: `Emergency protection shutdown active. Core chip heat spiked to peak limit of ${simulatedTemp}°C (Threshold limits capped at ${activeLimit}°C). Process allocations terminated to protect active hardware.`
+      });
+
+      alert(`⚠️ EMERGENCY CORE SAFEGUARD TRIGGERED\n\nYour active CPU/GPU core layout temperature spiked to ${simulatedTemp}°C, exceeding your configured threshold limits of ${activeLimit}°C.\n\nAll background thread operations have been cleanly terminated to protect your physical graphics card and system hardware.`);
+    }
+  }, [simulatedTemp, miningStats.isActive, setMiningStats, addTransaction]);
+
   // Check periodically to document heavy sessions to transactions
   useEffect(() => {
     const triggerReportInterval = setInterval(() => {
@@ -220,10 +270,6 @@ export default function ComputeGrid({
     ? (miningStats.hashRate * 3600) / HASH_TO_CREDIT_RATE
     : 0;
 
-  // Temperature formula: ambient (38 C) + base thermal scale based on active CPU/intensity
-  const simulatedTemp = miningStats.isActive
-    ? Math.round(38 + (miningStats.intensity * 0.3) + (miningStats.threads * 2.8) + (Math.random() * 1.5))
-    : 32;
 
   // SVGs for showing real-time compute spectrum line
   const maxHistory = Math.max(...recentHzHistory, 1);
@@ -270,37 +316,55 @@ export default function ComputeGrid({
             </div>
           )}
 
+          {/* Hardware Protection Safeguard Warning Banner */}
+          {!specs?.isConfigured && (
+            <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/25 rounded-2xl text-xs leading-relaxed text-amber-300 flex items-start gap-3 shadow-md animate-fade">
+              <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
+              <div>
+                <strong className="block text-white font-mono uppercase tracking-wider mb-1">⚠️ Hardware protection active (Eco Throttle)</strong>
+                Grid client detected an unconfigured device specification profile. Core operations are temporarily locked at conservative safe presets (<strong className="text-white">Cores: 1, Speed limit: 30%</strong>) to prevent graphic cards or ventilations burnout. Calibrate device specs in the <strong className="text-white text-cyan-400 underline cursor-pointer">Systems Settings</strong> (gear icon in the top header) to unleash ultimate multiprocessor power blocks.
+              </div>
+            </div>
+          )}
+
           {/* Controller core gauges */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {/* Thread Slider */}
-            <div className="glass-sub p-4 rounded-xl">
+            <div className={`glass-sub p-4 rounded-xl transition-all duration-300 ${!specs?.isConfigured ? 'opacity-50' : ''}`}>
               <div className="flex items-center justify-between mb-3 font-mono">
                 <span className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
                   <Laptop className="h-3.5 w-3.5 text-cyan-400" /> Allocated Cores
                 </span>
-                <span className="text-sm font-semibold text-cyan-400 glow-cyan">{miningStats.threads} {miningStats.threads === 1 ? 'Core' : 'Cores'}</span>
+                <span className="text-sm font-semibold text-cyan-400 glow-cyan">
+                  {miningStats.threads} {miningStats.threads === 1 ? 'Core' : 'Cores'}
+                  {!specs?.isConfigured && ' (Locked)'}
+                </span>
               </div>
               <input
                 type="range"
                 min="1"
                 max={Math.max(4, navigator.hardwareConcurrency || 8)}
                 value={miningStats.threads}
+                disabled={!specs?.isConfigured}
                 onChange={(e) => handleThreadsChange(parseInt(e.target.value))}
-                className="w-full accent-cyan-400 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                className="w-full accent-cyan-400 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               />
-              <div className="flex justify-between text-[10px] text-slate-505 mt-2 font-mono">
+              <div className="flex justify-between text-[10px] text-slate-500 mt-2 font-mono">
                 <span>1 Core</span>
                 <span>Max Cores ({Math.max(4, navigator.hardwareConcurrency || 8)})</span>
               </div>
             </div>
 
             {/* Intensity Slider */}
-            <div className="glass-sub p-4 rounded-xl">
+            <div className={`glass-sub p-4 rounded-xl transition-all duration-300 ${!specs?.isConfigured ? 'opacity-50' : ''}`}>
               <div className="flex items-center justify-between mb-3 font-mono">
                 <span className="text-xs text-slate-400 font-medium flex items-center gap-1.5 font-mono">
                   <Sliders className="h-3.5 w-3.5 text-indigo-400" /> Target Speed Limit
                 </span>
-                <span className="text-sm font-semibold text-indigo-400 glow-indigo">{miningStats.intensity}%</span>
+                <span className="text-sm font-semibold text-indigo-400 glow-indigo">
+                  {miningStats.intensity}%
+                  {!specs?.isConfigured && ' (Locked)'}
+                </span>
               </div>
               <input
                 type="range"
@@ -308,10 +372,11 @@ export default function ComputeGrid({
                 max="100"
                 step="10"
                 value={miningStats.intensity}
+                disabled={!specs?.isConfigured}
                 onChange={(e) => handleIntensityChange(parseInt(e.target.value))}
-                className="w-full accent-indigo-400 h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                className="w-full accent-indigo-400 h-1.5 bg-white/10 rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               />
-              <div className="flex justify-between text-[10px] text-slate-505 mt-2 font-mono">
+              <div className="flex justify-between text-[10px] text-slate-500 mt-2 font-mono">
                 <span>Eco (10%)</span>
                 <span>Extreme (100%)</span>
               </div>

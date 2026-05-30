@@ -1,15 +1,81 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Cpu, Gamepad2, CreditCard, History, ShieldCheck, Coins, Activity, Laptop } from 'lucide-react';
-import { Transaction, MiningStats } from './types';
+import { Cpu, Gamepad2, CreditCard, History, ShieldCheck, Coins, Activity, Laptop, Settings } from 'lucide-react';
+import { Transaction, MiningStats, ComputeSpecs, CustomTheme } from './types';
 import ComputeGrid from './components/ComputeGrid';
 import CasinoLobby from './components/CasinoLobby';
 import PayoutStation from './components/PayoutStation';
-import TransactionHistory from './components/TransactionHistory';
 import UserSettings from './components/UserSettings';
+import SystemSettings from './components/SystemSettings';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'compute' | 'casino' | 'payout' | 'settings'>('casino');
+  const [activeTab, setActiveTab] = useState<'compute' | 'casino' | 'payout' | 'settings' | 'system_settings'>('casino');
   const [username, setUsername] = useState<string>('Anon');
+  
+  // Computer Specifications Configuration state
+  const [specs, setSpecs] = useState<ComputeSpecs>(() => {
+    const saved = localStorage.getItem('sys_compute_specs');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      cpuModel: '',
+      gpuModel: '',
+      ramSize: '16GB',
+      coolingType: 'air',
+      psuCapacity: '650W',
+      isConfigured: false
+    };
+  });
+
+  // Current Active Theme Design configuration
+  const [theme, setTheme] = useState<CustomTheme>(() => {
+    const saved = localStorage.getItem('sys_active_theme');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      id: 'default',
+      name: 'Default Cyber-Slate',
+      isDefault: true,
+      background: { color: '#050510', imageUrl: '', useImage: false },
+      cards: {
+        slots: { color: '#090918', imageUrl: '', useImage: false },
+        blackjack: { color: '#090918', imageUrl: '', useImage: false },
+        crash: { color: '#090918', imageUrl: '', useImage: false },
+        roulette: { color: '#090918', imageUrl: '', useImage: false }
+      },
+      additionalCardsColor: '#3b82f6',
+      fontFamily: 'Inter, system-ui, sans-serif'
+    };
+  });
+
+  // Users saved themes inventory (up to 5)
+  const [savedThemes, setSavedThemes] = useState<CustomTheme[]>(() => {
+    const saved = localStorage.getItem('sys_saved_themes');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  // Automatically synchronize configs to LocalStorage on updates
+  useEffect(() => {
+    localStorage.setItem('sys_compute_specs', JSON.stringify(specs));
+  }, [specs]);
+
+  useEffect(() => {
+    localStorage.setItem('sys_active_theme', JSON.stringify(theme));
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('sys_saved_themes', JSON.stringify(savedThemes));
+  }, [savedThemes]);
   
   // Starting balance: 25.0 free credits as starter bonus to try out the system instantly
   const [balance, setBalance] = useState<number>(25.0);
@@ -71,11 +137,32 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#050510] text-slate-200 font-sans flex flex-col justify-between relative overflow-hidden" id="app-root-container">
+    <div 
+      className="min-h-screen text-slate-200 flex flex-col justify-between relative overflow-hidden transition-all duration-500" 
+      id="app-root-container"
+      style={{
+        fontFamily: theme.fontFamily,
+        backgroundColor: theme.background.color,
+        backgroundImage: theme.background.useImage && theme.background.imageUrl ? `url(${theme.background.imageUrl})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
       {/* Background Mesh Gradients */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
-      <div className="absolute top-[20%] right-[10%] w-[30%] h-[40%] bg-cyan-500/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+      <div 
+        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0 transition-opacity duration-500" 
+        style={{ opacity: theme.background.useImage ? 0.25 : 1 }}
+      />
+      <div 
+        className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none z-0 transition-opacity duration-500" 
+        style={{ opacity: theme.background.useImage ? 0.25 : 1 }}
+      />
+      <div 
+        className="absolute top-[20%] right-[10%] w-[30%] h-[40%] bg-cyan-500/5 rounded-full blur-[100px] pointer-events-none z-0 transition-opacity duration-500" 
+        style={{ opacity: theme.background.useImage ? 0.25 : 1 }}
+      />
 
       {/* Sticky Top-Right Balance Dashboard (Locked in corner on scroll) */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-3" id="locked-top-balance">
@@ -114,7 +201,7 @@ export default function App() {
               <div className="p-2.5 bg-gradient-to-tr from-cyan-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white">
                 <Cpu className="h-6 w-6" />
               </div>
-              <div className="absolute -top-1 -right-1 h-3 w-3 bg-cyan-400 rounded-full border-2 border-[#050510] animate-ping" />
+              <div className="absolute -top-1 -right-1 h-3 w-3 bg-cyan-400 rounded-full border-2 border-slate-900 animate-ping" />
             </div>
             <div>
               <h1 className="text-xl font-display font-black tracking-tight text-white flex items-center gap-1.5 leading-none">
@@ -124,6 +211,11 @@ export default function App() {
             </div>
           </div>
 
+          {/* Right Action Menu */}
+          <div className="flex items-center space-x-3 self-end md:self-auto">
+            {/* Keeping header clean and balanced */}
+          </div>
+
         </div>
       </div>
 
@@ -131,25 +223,42 @@ export default function App() {
       <main className="max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex-1 relative z-10">
         
         {/* Navigation Selector Bars - Glass pill design */}
-        <div className="flex bg-white/5 backdrop-blur-md border border-white/10 p-1.5 rounded-2xl mb-8 overflow-x-auto min-w-full gap-2 text-xs">
-          {[
-            { id: 'casino' as const, label: 'PLAY WAGER ARCADE', icon: <Gamepad2 className="h-4 w-4" /> },
-            { id: 'compute' as const, label: 'LEND CORE POWER', icon: <Cpu className="h-4 w-4" /> },
-            { id: 'payout' as const, label: 'PAYOUT STATION', icon: <CreditCard className="h-4 w-4" /> },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2.5 px-5 py-3 text-xs font-mono font-bold tracking-wider cursor-pointer transition-all shrink-0 uppercase rounded-xl border ${
-                activeTab === tab.id
-                  ? 'bg-white/10 border-white/20 text-cyan-400 shadow-glow-cyan'
-                  : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex items-center justify-between bg-white/5 backdrop-blur-md border border-white/10 p-1.5 rounded-2xl mb-8 min-w-full gap-2 text-xs">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {[
+              { id: 'casino' as const, label: 'PLAY WAGER ARCADE', icon: <Gamepad2 className="h-4 w-4" /> },
+              { id: 'compute' as const, label: 'LEND CORE POWER', icon: <Cpu className="h-4 w-4" /> },
+              { id: 'payout' as const, label: 'PAYOUT STATION', icon: <CreditCard className="h-4 w-4" /> },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2.5 px-5 py-3 text-xs font-mono font-bold tracking-wider cursor-pointer transition-all shrink-0 uppercase rounded-xl border ${
+                  activeTab === tab.id
+                    ? 'bg-white/10 border-white/20 text-cyan-400 shadow-glow-cyan'
+                    : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Right Edge Navigation Gear Icon Button */}
+          <button
+            onClick={() => setActiveTab('system_settings')}
+            className={`group flex items-center justify-center p-3 rounded-xl border cursor-pointer transition-all shrink-0 ${
+              activeTab === 'system_settings'
+                ? 'bg-white/10 border-white/20 text-cyan-400 shadow-glow-cyan'
+                : 'border-transparent bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 border-white/5'
+            }`}
+            title="Open Calibrations & Settings Panel"
+            id="system-settings-gear-btn"
+            style={{ width: '42px', height: '42px' }}
+          >
+            <Settings className={`h-4.5 w-4.5 transition-transform duration-500 ${activeTab === 'system_settings' ? 'rotate-90 text-cyan-400' : 'group-hover:rotate-45 text-slate-300'}`} />
+          </button>
         </div>
 
         {/* Tab content wrappers */}
@@ -159,6 +268,7 @@ export default function App() {
               balance={balance}
               setBalance={setBalanceUpdater}
               addTransaction={addTransaction}
+              theme={theme}
             />
           )}
 
@@ -169,6 +279,7 @@ export default function App() {
               addTransaction={addTransaction}
               miningStats={miningStats}
               setMiningStats={setMiningStats}
+              specs={specs}
             />
           )}
 
@@ -188,6 +299,17 @@ export default function App() {
               balance={balance}
               isPollRunning={isPollRunning}
               lastRefreshTime={lastRefreshTime}
+            />
+          )}
+
+          {activeTab === 'system_settings' && (
+            <SystemSettings
+              specs={specs}
+              setSpecs={setSpecs}
+              theme={theme}
+              setTheme={setTheme}
+              savedThemes={savedThemes}
+              setSavedThemes={setSavedThemes}
             />
           )}
         </div>

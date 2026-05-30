@@ -51,3 +51,37 @@ export interface CrashState {
   cashOutMultiplier: number;
   crashedAt: number;
 }
+
+export interface ComputeSpecs {
+  cpuModel: string;
+  gpuModel: string;
+  ramSize: string;
+  coolingType: 'air' | 'liquid' | '';
+  psuCapacity: string;
+  isConfigured: boolean;
+}
+
+export interface GameCardTheme {
+  color: string;
+  imageUrl: string;
+  useImage: boolean;
+}
+
+export interface CustomTheme {
+  id: string;
+  name: string;
+  isDefault?: boolean;
+  background: {
+    color: string;
+    imageUrl: string;
+    useImage: boolean;
+  };
+  cards: {
+    slots: GameCardTheme;
+    blackjack: GameCardTheme;
+    crash: GameCardTheme;
+    roulette: GameCardTheme;
+  };
+  additionalCardsColor: string;
+  fontFamily: string;
+}
