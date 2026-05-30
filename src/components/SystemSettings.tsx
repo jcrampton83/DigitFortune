@@ -741,6 +741,22 @@ export default function SystemSettings({
                 </button>
               </div>
 
+              {/* Reset All Settings Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("Are you sure you want to reset all settings? This will clear compute specs, active theme, and current performance metrics. Lifetime totals remain unchanged.")) {
+                    localStorage.removeItem('sys_compute_specs');
+                    localStorage.removeItem('sys_active_theme');
+                    localStorage.setItem('sys_ledger_reset_timestamp', Date.now().toString());
+                    window.location.reload();
+                  }
+                }}
+                className="w-full mt-4 bg-red-650/80 hover:bg-red-600 border border-red-400/30 py-3 rounded-xl font-mono text-[11px] font-bold text-white uppercase tracking-wider cursor-pointer shadow-lg flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" /> Reset All Settings
+              </button>
+
             </div>
           </div>
         </div>

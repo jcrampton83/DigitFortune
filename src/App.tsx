@@ -1,14 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Cpu, Gamepad2, CreditCard, History, ShieldCheck, Coins, Activity, Laptop, Settings } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Cpu, Gamepad2, CreditCard, History, ShieldCheck, Coins, Activity, Laptop, Settings, Lock } from 'lucide-react';
 import { Transaction, MiningStats, ComputeSpecs, CustomTheme } from './types';
 import ComputeGrid from './components/ComputeGrid';
 import CasinoLobby from './components/CasinoLobby';
 import PayoutStation from './components/PayoutStation';
 import UserSettings from './components/UserSettings';
 import SystemSettings from './components/SystemSettings';
+import AdminDashboard from './components/admin/AdminDashboard';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'compute' | 'casino' | 'payout' | 'settings' | 'system_settings'>('casino');
+  const [activeTab, setActiveTab] = useState<'compute' | 'casino' | 'payout' | 'settings' | 'system_settings' | 'admin'>('casino');
   const [username, setUsername] = useState<string>('Anon');
   
   // Computer Specifications Configuration state
@@ -76,7 +78,7 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('sys_saved_themes', JSON.stringify(savedThemes));
   }, [savedThemes]);
-  
+
   // Starting balance: 25.0 free credits as starter bonus to try out the system instantly
   const [balance, setBalance] = useState<number>(25.0);
 
@@ -91,16 +93,28 @@ export default function App() {
   });
 
   // Seed default transaction history blocks for realism
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: 'reg-claim-fmg1085',
-      timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-      type: 'earn',
-      amount: 25.0,
-      title: 'Starter Promotion Credit Claim',
-      details: 'Initial welcome balance allocated representing node test setup.',
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const saved = localStorage.getItem('sys_transactions');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
     }
-  ]);
+    return [
+      {
+        id: 'reg-claim-fmg1085',
+        timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+        type: 'earn',
+        amount: 25.0,
+        title: 'Starter Promotion Credit Claim',
+        details: 'Initial welcome balance allocated representing node test setup.',
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sys_transactions', JSON.stringify(transactions));
+  }, [transactions]);
 
   // Polling & Live Ledger synchronization monitors
   const [lastRefreshTime, setLastRefreshTime] = useState<string>(new Date().toISOString());
@@ -137,8 +151,11 @@ export default function App() {
   }, []);
 
   return (
-    <div 
-      className="min-h-screen text-slate-200 flex flex-col justify-between relative overflow-hidden transition-all duration-500" 
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      key={theme.id}
+      className="min-h-screen text-slate-200 flex flex-col justify-between relative overflow-hidden" 
       id="app-root-container"
       style={{
         fontFamily: theme.fontFamily,
@@ -229,6 +246,7 @@ export default function App() {
               { id: 'casino' as const, label: 'PLAY WAGER ARCADE', icon: <Gamepad2 className="h-4 w-4" /> },
               { id: 'compute' as const, label: 'LEND CORE POWER', icon: <Cpu className="h-4 w-4" /> },
               { id: 'payout' as const, label: 'PAYOUT STATION', icon: <CreditCard className="h-4 w-4" /> },
+              { id: 'admin' as const, label: 'ADMIN PORTAL', icon: <Lock className="h-4 w-4" /> },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -312,6 +330,10 @@ export default function App() {
               setSavedThemes={setSavedThemes}
             />
           )}
+
+          {activeTab === 'admin' && (
+            <AdminDashboard />
+          )}
         </div>
       </main>
 
@@ -328,6 +350,6 @@ export default function App() {
           </div>
         </div>
       </footer>
-    </div>
+    </motion.div>
   );
 }

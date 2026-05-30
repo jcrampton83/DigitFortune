@@ -46,6 +46,12 @@ export default function UserSettings({
 
   const netWagerGains = totalAmountWon - totalSpentOnWagers;
 
+  const resetTimestamp = parseInt(localStorage.getItem('sys_ledger_reset_timestamp') || '0');
+  const recentTransactions = transactions.filter(t => new Date(t.timestamp).getTime() > resetTimestamp);
+  const wonCurrent = recentTransactions.filter(t => t.type === 'wager_win').reduce((acc, t) => acc + t.amount, 0);
+  const lostCurrent = recentTransactions.filter(t => t.type === 'wager_loss').reduce((acc, t) => acc + t.amount, 0);
+  const netCurrent = wonCurrent - lostCurrent;
+
   const handleSaveName = () => {
     const trimmed = tempName.trim();
     if (trimmed) {
@@ -223,68 +229,89 @@ export default function UserSettings({
 
         {isExpanded && (
           <div className="p-6 border-t border-white/5 bg-slate-950/40 space-y-6 animate-fade">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              
-              {/* Mining Earnings */}
-              <div className="glass-sub p-4 rounded-xl border border-white/5 relative overflow-hidden">
-                <span className="block text-[9px] font-mono font-black text-slate-450 tracking-wider uppercase mb-1">Mining Rewards</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-bold text-cyan-400 font-mono glow-cyan">
-                    {totalMiningEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400">Cr</span>
+            
+            {/* Lifetime Statistics */}
+            <div className="mb-4">
+              <h4 className="text-[10px] font-mono font-bold text-slate-450 uppercase tracking-wider mb-3">Lifetime Statistics</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                {/* Mining Earnings */}
+                <div className="glass-sub p-4 rounded-xl border border-white/5 relative overflow-hidden">
+                  <span className="block text-[9px] font-mono font-black text-slate-450 tracking-wider uppercase mb-1">Mining Rewards</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-bold text-cyan-400 font-mono glow-cyan">
+                      {totalMiningEarned.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">Cr</span>
+                  </div>
+                  <div className="absolute right-2 bottom-2 bg-cyan-400/5 p-1.5 rounded-lg border border-cyan-400/10">
+                    <Cpu className="h-3.5 w-3.5 text-cyan-400/60" />
+                  </div>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1.5 font-mono">Total grid computer rewards earned.</p>
-                <div className="absolute right-2 bottom-2 bg-cyan-400/5 p-1.5 rounded-lg border border-cyan-400/10">
-                  <Cpu className="h-3.5 w-3.5 text-cyan-400/60" />
+
+                {/* Total Wagered / Bets */}
+                <div className="glass-sub p-4 rounded-xl border border-white/5 relative overflow-hidden">
+                  <span className="block text-[9px] font-mono font-black text-slate-450 tracking-wider uppercase mb-1">Total Wagered (Spent)</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-bold text-amber-400 font-mono">
+                      {totalSpentOnWagers.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">Cr</span>
+                  </div>
+                  <div className="absolute right-2 bottom-2 bg-amber-400/5 p-1.5 rounded-lg border border-amber-400/10">
+                    <Coins className="h-3.5 w-3.5 text-amber-400/60" />
+                  </div>
+                </div>
+
+                {/* Casino Winnings */}
+                <div className="glass-sub p-4 rounded-xl border border-white/5 relative overflow-hidden">
+                  <span className="block text-[9px] font-mono font-black text-slate-450 tracking-wider uppercase mb-1">Total Won</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-bold text-emerald-400 font-mono">
+                      {totalAmountWon.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">Cr</span>
+                  </div>
+                  <div className="absolute right-2 bottom-2 bg-emerald-400/5 p-1.5 rounded-lg border border-emerald-400/10">
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-400/60" />
+                  </div>
+                </div>
+
+                {/* Casino Losses */}
+                <div className="glass-sub p-4 rounded-xl border border-white/5 relative overflow-hidden">
+                  <span className="block text-[9px] font-mono font-black text-slate-450 tracking-wider uppercase mb-1">Total Lost</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-base font-bold text-red-400 font-mono">
+                      {totalAmountLost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">Cr</span>
+                  </div>
+                  <div className="absolute right-2 bottom-2 bg-red-400/5 p-1.5 rounded-lg border border-red-400/10">
+                    <TrendingDown className="h-3.5 w-3.5 text-red-400/60" />
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* Total Wagered / Bets */}
-              <div className="glass-sub p-4 rounded-xl border border-white/5 relative overflow-hidden">
-                <span className="block text-[9px] font-mono font-black text-slate-450 tracking-wider uppercase mb-1">Total Wagered (Spent)</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-bold text-amber-400 font-mono">
-                    {totalSpentOnWagers.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400">Cr</span>
+            {/* Current Statistics */}
+            <div className="mb-4">
+              <h4 className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-wider mb-3">Current Session Performance</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="glass-sub p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5">
+                  <span className="block text-[9px] font-mono font-black text-indigo-300 tracking-wider uppercase mb-1">Current Won</span>
+                  <span className="text-base font-bold text-emerald-400 font-mono">{wonCurrent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr</span>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1.5 font-mono">Credits placed as bets across wager games.</p>
-                <div className="absolute right-2 bottom-2 bg-amber-400/5 p-1.5 rounded-lg border border-amber-400/10">
-                  <Coins className="h-3.5 w-3.5 text-amber-400/60" />
+                <div className="glass-sub p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5">
+                  <span className="block text-[9px] font-mono font-black text-indigo-300 tracking-wider uppercase mb-1">Current Lost</span>
+                  <span className="text-base font-bold text-red-400 font-mono">{lostCurrent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr</span>
+                </div>
+                <div className="glass-sub p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5">
+                  <span className="block text-[9px] font-mono font-black text-indigo-300 tracking-wider uppercase mb-1">Current Gaming Performance</span>
+                  <span className={`text-base font-bold font-mono ${netCurrent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {netCurrent >= 0 ? '+' : ''}{netCurrent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Cr
+                  </span>
                 </div>
               </div>
-
-              {/* Casino Winnings */}
-              <div className="glass-sub p-4 rounded-xl border border-white/5 relative overflow-hidden">
-                <span className="block text-[9px] font-mono font-black text-slate-450 tracking-wider uppercase mb-1">Total Won</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-bold text-emerald-400 font-mono">
-                    {totalAmountWon.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400">Cr</span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1.5 font-mono">Sum total of victorious arcade wagers payouts.</p>
-                <div className="absolute right-2 bottom-2 bg-emerald-400/5 p-1.5 rounded-lg border border-emerald-400/10">
-                  <TrendingUp className="h-3.5 w-3.5 text-emerald-400/60" />
-                </div>
-              </div>
-
-              {/* Casino Losses */}
-              <div className="glass-sub p-4 rounded-xl border border-white/5 relative overflow-hidden">
-                <span className="block text-[9px] font-mono font-black text-slate-450 tracking-wider uppercase mb-1">Total Lost</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-base font-bold text-red-400 font-mono">
-                    {totalAmountLost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400">Cr</span>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1.5 font-mono">Total credits burned on unsuccessful wager hands.</p>
-                <div className="absolute right-2 bottom-2 bg-red-400/5 p-1.5 rounded-lg border border-red-400/10">
-                  <TrendingDown className="h-3.5 w-3.5 text-red-400/60" />
-                </div>
-              </div>
-
             </div>
 
             {/* Combined/Net Section */}
@@ -302,8 +329,7 @@ export default function UserSettings({
                   )}
                 </div>
                 <div>
-                  <span className="block text-[11px] font-mono font-bold uppercase text-slate-450">Net Gaming Performance (Profit/Loss)</span>
-                  <p className="text-[10px] text-slate-400 font-sans mt-0.5">Calculated by subtracting total wager deposits from jackpot winnings payouts.</p>
+                  <span className="block text-[11px] font-mono font-bold uppercase text-slate-450">Net Gaming Performance (Total)</span>
                 </div>
               </div>
 

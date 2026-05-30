@@ -1,15 +1,75 @@
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ActiveGame, Transaction, CustomTheme } from '../types';
 import SlotsGame from './games/SlotsGame';
 import BlackjackGame from './games/BlackjackGame';
 import CrashGame from './games/CrashGame';
 import RouletteGame from './games/RouletteGame';
-import { Trophy, HelpCircle, Gamepad2, Coins, ArrowLeft, Zap, Target, Flame, Play } from 'lucide-react';
+import { Trophy, HelpCircle, Gamepad2, Coins, ArrowLeft, Zap, Target, Flame, Play, Info } from 'lucide-react';
 
 import slotsBg from '../assets/images/slots_bg_1780087825382.png';
 import blackjackBg from '../assets/images/blackjack_bg_1780087844046.png';
 import crashBg from '../assets/images/crash_bg_1780087859289.png';
 import rouletteBg from '../assets/images/roulette_bg_1780087875817.png';
+
+interface GameVariant {
+  name: string;
+  minBet: string;
+}
+
+interface GameDefinition {
+  id: 'slots' | 'blackjack' | 'crash' | 'roulette';
+  name: string;
+  desc: string;
+  icon: ReactNode;
+  badge: string;
+  bg: string;
+  rules: string;
+  variants: GameVariant[];
+}
+
+const GAMES: GameDefinition[] = [
+  {
+    id: 'slots',
+    name: 'Slots',
+    desc: 'Pull the mechanical layout arm & match crypt-coded indicators for jackpot payouts up to 150x.',
+    icon: <Flame className="h-6 w-6 text-orange-400 font-bold" />,
+    badge: 'POPULAR',
+    bg: slotsBg,
+    rules: 'Match 3 crypt-coded indicators in a row to win. Different symbols have different payout multipliers.',
+    variants: [{ name: 'Classic Slots', minBet: '1 Cr' }, { name: 'Cyber Slots', minBet: '2 Cr' }, { name: 'MegaSlots', minBet: '5 Cr' }]
+  },
+  {
+    id: 'blackjack',
+    name: 'Blackjack',
+    desc: 'Play standard double-down tactical blackjack versus automated dealer scripts. Aim precisely for 21.',
+    icon: <Target className="h-6 w-6 text-sky-400" />,
+    badge: 'SKILL',
+    bg: blackjackBg,
+    rules: 'Beat the dealer\'s hand without busting. Closest to 21 wins. Double down on strong starting totals.',
+    variants: [{ name: 'Standard BJ', minBet: '5 Cr' }, { name: 'Speed BJ', minBet: '10 Cr' }]
+  },
+  {
+    id: 'crash',
+    name: 'Crash',
+    desc: 'Watch the parabolic curve multiplier climb. Claim your earnings manually before the process crashes.',
+    icon: <Zap className="h-6 w-6 text-yellow-400" />,
+    badge: 'TRENDING',
+    bg: crashBg,
+    rules: 'Multiply your bet before the curve crashes. Cash out at any multiplier higher than 1x.',
+    variants: [{ name: 'Vektr Crash', minBet: '1 Cr' }, { name: 'Fast Crash', minBet: '2 Cr' }]
+  },
+  {
+    id: 'roulette',
+    name: 'Roulette',
+    desc: 'European single-zero roulette. Place wagers on sector colors, oddness properties, or custom numbers.',
+    icon: <Gamepad2 className="h-6 w-6 text-purple-400" />,
+    badge: 'CLASSIC',
+    bg: rouletteBg,
+    rules: 'Spin the wheel and bet on the sector. Payouts depend on the risk of your selected sector number.',
+    variants: [{ name: 'European', minBet: '1 Cr' }, { name: 'Zoom', minBet: '2 Cr' }, { name: 'African', minBet: '5 Cr' }]
+  },
+];
 
 interface CasinoLobbyProps {
   balance: number;
@@ -20,50 +80,9 @@ interface CasinoLobbyProps {
 
 export default function CasinoLobby({ balance, setBalance, addTransaction, theme }: CasinoLobbyProps) {
   const [activeGame, setActiveGame] = useState<ActiveGame>(null);
-
-  // Available games metadata
-  const GAMES = [
-    {
-      id: 'slots' as const,
-      name: 'Grid Cycle Slots',
-      desc: 'Pull the mechanical layout arm & match crypt-coded indicators for jackpot payouts up to 150x.',
-      icon: <Flame className="h-6 w-6 text-orange-400 font-bold" />,
-      minBet: '1 Credit',
-      maxMultiplier: '150x',
-      badge: 'POPULAR',
-      bg: slotsBg,
-    },
-    {
-      id: 'blackjack' as const,
-      name: 'Grid Proof Blackjack',
-      desc: 'Play standard double-down tactical blackjack versus automated dealer scripts. Aim precisely for 21.',
-      icon: <Target className="h-6 w-6 text-sky-400" />,
-      minBet: '5 Credits',
-      maxMultiplier: '2.5x',
-      badge: 'SKILL',
-      bg: blackjackBg,
-    },
-    {
-      id: 'crash' as const,
-      name: 'Grid Vektr Crash',
-      desc: 'Watch the parabolic curve multiplier climb. Claim your earnings manually before the process crashes.',
-      icon: <Zap className="h-6 w-6 text-yellow-400" />,
-      minBet: '1 Credit',
-      maxMultiplier: 'DYNAMIC',
-      badge: 'TRENDING',
-      bg: crashBg,
-    },
-    {
-      id: 'roulette' as const,
-      name: 'Grid Cycle Roulette',
-      desc: 'European single-zero roulette. Place wagers on sector colors, oddness properties, or custom numbers.',
-      icon: <Gamepad2 className="h-6 w-6 text-purple-400" />,
-      minBet: '1 Credit',
-      maxMultiplier: '35x',
-      badge: 'CLASSIC',
-      bg: rouletteBg,
-    },
-  ];
+  const [selectedGame, setSelectedGame] = useState<GameDefinition | null>(null);
+  const [rulesGame, setRulesGame] = useState<GameDefinition | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number, y: number, text: string } | null>(null);
 
   if (activeGame === 'slots') {
     return (
@@ -123,81 +142,125 @@ export default function CasinoLobby({ balance, setBalance, addTransaction, theme
 
   return (
     <div className="space-y-6 text-slate-100 relative z-10" id="casino-lobby">
-      {/* Grid of games cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-        {GAMES.map((game) => {
-          const gameCardTheme = theme?.cards?.[game.id];
-          const isThemeDefault = !theme || theme.id === 'default' || theme.isDefault;
+      <AnimatePresence mode="wait">
+        {!selectedGame ? (
+          <motion.div
+            key="lobby-grid"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2"
+          >
+            {GAMES.map((game) => {
+              const gameCardTheme = theme?.cards?.[game.id];
+              const isThemeDefault = !theme || theme.id === 'default' || theme.isDefault;
 
-          let bgSrc = game.bg;
-          let shouldRenderImage = true;
+              let bgSrc = game.bg;
+              let shouldRenderImage = true;
 
-          if (!isThemeDefault && gameCardTheme) {
-            if (gameCardTheme.useImage && gameCardTheme.imageUrl) {
-              bgSrc = gameCardTheme.imageUrl;
-              shouldRenderImage = true;
-            } else if (!gameCardTheme.useImage && !gameCardTheme.imageUrl) {
-              // They haven't set a custom image, so we keep the default game image as fallback
-              bgSrc = game.bg;
-              shouldRenderImage = true;
-            } else {
-              // They have explicitly chosen "Use Solid", so don't render the image
-              shouldRenderImage = false;
-            }
-          }
+              if (!isThemeDefault && gameCardTheme) {
+                if (gameCardTheme.useImage && gameCardTheme.imageUrl) {
+                  bgSrc = gameCardTheme.imageUrl;
+                  shouldRenderImage = true;
+                } else if (!gameCardTheme.useImage && !gameCardTheme.imageUrl) {
+                  bgSrc = game.bg;
+                  shouldRenderImage = true;
+                } else {
+                  shouldRenderImage = false;
+                }
+              }
+              
+              return (
+              <motion.div
+                key={game.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSelectedGame(game)}
+                className="group relative glass-container bg-slate-950/50 hover:border-cyan-500/50 rounded-2xl p-6 cursor-pointer transition-all flex flex-col justify-between overflow-hidden shadow-xl min-h-[200px] border border-white/5 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]"
+                style={{ backgroundColor: !isThemeDefault ? gameCardTheme?.color : undefined }}
+              >
+                {shouldRenderImage && bgSrc && (
+                  <img
+                    src={bgSrc}
+                    alt={game.name}
+                    referrerPolicy="no-referrer"
+                    className="absolute inset-0 w-full h-full object-cover opacity-25 group-hover:opacity-40 transition-all duration-700 pointer-events-none z-0"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/30 z-0 pointer-events-none" />
 
-          return (
-            <div
-              key={game.id}
-              onClick={() => setActiveGame(game.id)}
-              className="group relative glass-container hover:bg-white/[0.02] hover:border-cyan-400/40 rounded-2xl p-6 cursor-pointer transition-all hover:scale-[1.01] flex flex-col justify-between overflow-hidden shadow-xl min-h-[240px]"
-              style={{ backgroundColor: !isThemeDefault ? gameCardTheme?.color : undefined }}
-            >
-              {/* Immersive Game Background Image with Glass Overlay */}
-              {shouldRenderImage && bgSrc && (
-                <img
-                  src={bgSrc}
-                  alt={game.name}
-                  referrerPolicy="no-referrer"
-                  className="absolute inset-0 w-full h-full object-cover opacity-25 group-hover:opacity-35 group-hover:scale-105 transition-all duration-700 pointer-events-none z-0"
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/30 z-0 pointer-events-none" />
-
-            <div className="relative z-10">
-              {/* Card headers */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-black/60 border border-white/10 rounded-xl group-hover:border-cyan-500/40 group-hover:bg-black/80 transition-all shadow-md">
-                  {game.icon}
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-4">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setRulesGame(game); }}
+                      className="p-3 bg-black/60 border border-white/10 rounded-xl group-hover:border-cyan-500/40 transition-all shadow-md group-hover:shadow-[0_0_10px_rgba(34,211,238,0.3)] hover:glow-cyan"
+                    >
+                      {game.icon}
+                    </button>
+                    <button
+                      onMouseEnter={(e) => { setTooltip({ x: e.clientX, y: e.clientY, text: game.desc }); }}
+                      onMouseLeave={() => setTooltip(null)}
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-glow-cyan hover:bg-cyan-500/20"
+                    >
+                      ?
+                    </button>
+                  </div>
+                  <h3 className="text-xl font-bold text-white transition-colors mb-2 font-display">
+                    {game.name}
+                  </h3>
                 </div>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-black tracking-widest bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 uppercase shadow-glow-cyan">
-                  {game.badge}
-                </span>
-              </div>
-
-              {/* Descriptions title */}
-              <h3 className="text-base font-bold text-white group-hover:text-cyan-400 group-hover:glow-cyan transition-colors mb-2 font-display">
-                {game.name}
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed max-w-[90%]">
-                {game.desc}
-              </p>
+              </motion.div>
+              );
+            })}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="variants-view"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
+            <button
+              onClick={() => setSelectedGame(null)}
+              className="inline-flex items-center gap-1.5 text-xs text-cyan-400 font-mono hover:text-cyan-300 font-semibold cursor-pointer py-1"
+            >
+              <ArrowLeft className="h-4 w-4" /> BACK TO LOBBY
+            </button>
+            <h2 className="text-2xl font-bold">{selectedGame.name} Variants</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {selectedGame.variants.map((variant) => (
+                <div 
+                  key={variant.name} 
+                  onClick={() => setActiveGame(selectedGame.id)}
+                  className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-500/30 cursor-pointer transition-all hover:bg-white/10"
+                >
+                  <h4 className="font-bold">{variant.name}</h4>
+                  <p className="text-xs text-slate-400">Min bet: {variant.minBet}</p>
+                </div>
+              ))}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {/* Bottom details indicators */}
-            <div className="relative z-10 border-t border-white/10 pt-4 mt-6 flex items-center justify-between text-[11px] font-mono text-slate-400">
-              <div className="flex gap-4">
-                <span>Min bet: <strong className="text-slate-200">{game.minBet}</strong></span>
-                <span>Max mult: <strong className="text-slate-200">{game.maxMultiplier}</strong></span>
-              </div>
-              <span className="text-cyan-400 font-bold flex items-center group-hover:translate-x-1 transition-transform glow-cyan">
-                COMMENCE PLAY <Play className="h-3 w-3 ml-1 fill-current" />
-              </span>
-            </div>
+      {/* Rules Modal */}
+      {rulesGame && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+          <div className="bg-slate-900 border border-cyan-500/50 rounded-2xl p-8 max-w-lg w-full">
+            <h3 className="text-2xl font-bold mb-4">{rulesGame.name} Rules</h3>
+            <p className="text-slate-300 mb-6">{rulesGame.rules}</p>
+            <button onClick={() => setRulesGame(null)} className="w-full py-2 bg-cyan-600 rounded-lg hover:bg-cyan-500">Close</button>
           </div>
-        );
-        })}
-      </div>
+        </div>
+      )}
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div className="fixed z-50 bg-black border border-cyan-500/30 p-3 rounded-lg text-xs max-w-xs shadow-xl" style={{ top: tooltip.y + 10, left: tooltip.x + 10 }}>
+          {tooltip.text}
+        </div>
+      )}
     </div>
   );
 }
